@@ -27,7 +27,7 @@ cd life-expectancy-model
 ### 2. Install the Python dependencies
 
 ```bash
-python3 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
