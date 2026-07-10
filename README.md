@@ -43,7 +43,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### OPTIONAL:
+### OPTIONAL
 ---
 
 ## Using real NHANES data
