@@ -43,6 +43,43 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+### OPTIONAL:
+---
+
+## Using real NHANES data
+
+The default cohort is synthetic so the project runs immediately. To use real
+data instead:
+
+**a. Download the survey files.** For each NHANES cycle you want
+(2011-2012, 2013-2014, 2015-2016 recommended), download these `.XPT` files
+from [wwwn.cdc.gov/nchs/nhanes](https://wwwn.cdc.gov/nchs/nhanes/):
+
+| File | Contents | Key columns |
+|---|---|---|
+| `DEMO_<X>.XPT` | Demographics | age `RIDAGEYR`, sex `RIAGENDR`, id `SEQN` |
+| `SMQ_<X>.XPT`  | Smoking | `SMQ020` (ever), `SMQ040` (now) |
+| `BMX_<X>.XPT`  | Body measures | BMI `BMXBMI` |
+| `ALQ_<X>.XPT`  | Alcohol | varies by cycle |
+| `BPX_<X>.XPT`  | Blood pressure | systolic `BPXSY1`–`BPXSY4` |
+
+`<X>` is the cycle letter: 2011–12 = `G`, 2013–14 = `H`, 2015–16 = `I`.
+
+**b. Download the linked mortality file(s)** from the
+[NCHS data-linkage page](https://www.cdc.gov/nchs/data-linkage/mortality-public.htm).
+These are fixed-width `.dat` files named like
+`NHANES_2011_2012_MORT_2019_PUBLIC.dat`.
+
+**c. Put everything in `data/raw/`, then run:**
+
+```bash
+python -m src.build_cohort      # writes a real data/cohort.csv (same columns)
+python -m src.cox_model
+python -m src.bayesian_hazard
+streamlit run app.py
+```
+
+
 </details>
 
 ### 3. Fit the models
@@ -121,40 +158,6 @@ life-expectancy-model/
     └── survival.py          person survival curve + credible bands
 ```
 
----
-
-## Using real NHANES data
-
-The default cohort is synthetic so the project runs immediately. To use real
-data instead:
-
-**a. Download the survey files.** For each NHANES cycle you want
-(2011-2012, 2013-2014, 2015-2016 recommended), download these `.XPT` files
-from [wwwn.cdc.gov/nchs/nhanes](https://wwwn.cdc.gov/nchs/nhanes/):
-
-| File | Contents | Key columns |
-|---|---|---|
-| `DEMO_<X>.XPT` | Demographics | age `RIDAGEYR`, sex `RIAGENDR`, id `SEQN` |
-| `SMQ_<X>.XPT`  | Smoking | `SMQ020` (ever), `SMQ040` (now) |
-| `BMX_<X>.XPT`  | Body measures | BMI `BMXBMI` |
-| `ALQ_<X>.XPT`  | Alcohol | varies by cycle |
-| `BPX_<X>.XPT`  | Blood pressure | systolic `BPXSY1`–`BPXSY4` |
-
-`<X>` is the cycle letter: 2011–12 = `G`, 2013–14 = `H`, 2015–16 = `I`.
-
-**b. Download the linked mortality file(s)** from the
-[NCHS data-linkage page](https://www.cdc.gov/nchs/data-linkage/mortality-public.htm).
-These are fixed-width `.dat` files named like
-`NHANES_2011_2012_MORT_2019_PUBLIC.dat`.
-
-**c. Put everything in `data/raw/`, then run:**
-
-```bash
-python -m src.build_cohort      # writes a real data/cohort.csv (same columns)
-python -m src.cox_model
-python -m src.bayesian_hazard
-streamlit run app.py
-```
 
 Nothing else changes — the real cohort has the same schema as the synthetic
 one.
