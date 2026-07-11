@@ -27,10 +27,17 @@ cd life-expectancy-model
 ### 2. Install the Python dependencies
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+Or just run the setup script, which does the same three commands for you:
+
+```bash
+bash setup.sh
+source .venv/bin/activate
 ```
 
 <details>
@@ -42,13 +49,13 @@ python -m venv .venv
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
 </details>
-### OPTIONAL
----
 
-## Using real NHANES data
+### 3. (Optional) Add real NHANES data
 
-The default cohort is synthetic so the project runs immediately. To use real
+By default the pipeline uses a synthetic cohort so it runs immediately with
+zero setup — skip straight to step 4 if that's fine for now. To use real
 data instead:
 
 **a. Download the survey files.** For each NHANES cycle you want
@@ -70,31 +77,26 @@ from [wwwn.cdc.gov/nchs/nhanes](https://wwwn.cdc.gov/nchs/nhanes/):
 These are fixed-width `.dat` files named like
 `NHANES_2011_2012_MORT_2019_PUBLIC.dat`.
 
-**c. Put everything in `data/raw/`, then run:**
+**c. Put everything in `data/raw/`.** That's it — no flags or extra commands.
+`run_pipeline.py` (next step) checks `data/raw/` every time it runs: if real
+NHANES files are there, it builds and uses the real cohort; if not, it falls
+back to synthetic. (You can also run `python -m src.build_cohort` directly
+later if you just want to rebuild the cohort without refitting everything
+else.)
 
-```bash
-python -m src.build_cohort      # writes a real data/cohort.csv (same columns)
-python -m src.cox_model
-python -m src.bayesian_hazard
-streamlit run app.py
-```
-
-
-</details>
-
-### 3. Fit the models
+### 4. Fit the models
 
 ```bash
 python run_pipeline.py            # add --quick for a faster MCMC run
                                    # add --skip-bayes if you don't want PyMC
 ```
 
-This runs, in order: SSA baseline fit → cohort data (synthetic by default) →
-Cox model → Bayesian model. Takes a couple of minutes; PyMC sampling is the
-slow part (`--quick` cuts that down, `--cores 4` parallelizes it on a
-multi-core machine).
+This runs, in order: SSA baseline fit → cohort data (real if you added it in
+step 3, synthetic otherwise) → Cox model → Bayesian model. Takes a couple of
+minutes; PyMC sampling is the slow part (`--quick` cuts that down, `--cores 4`
+parallelizes it on a multi-core machine).
 
-### 4. Launch the app
+### 5. Launch the app
 
 ```bash
 streamlit run app.py
@@ -116,7 +118,7 @@ pressure, and alcohol use, and see an estimated survival curve.
 2. **Cohort (the evidence).** By default a **synthetic** cohort drawn from a
    *known* ground-truth hazard model — genuinely useful, because after
    fitting you can confirm the models recover the hazard ratios that were
-   baked in. Swap in real NHANES data any time (see below).
+   baked in. Swap in real NHANES data any time (see "Getting started" above).
 
 3. **Cox model (the validation anchor).** A fast frequentist Cox
    proportional-hazards fit (`lifelines`). Its hazard ratios should have
@@ -147,7 +149,7 @@ life-expectancy-model/
 ├── data/
 │   ├── ssa_life_table_2023_fallback.csv   bundled SSA snapshot (offline fallback)
 │   ├── cohort.csv           generated (synthetic by default; gitignored)
-│   └── raw/                 put real NHANES files here (see below)
+│   └── raw/                 put real NHANES files here (see "Getting started")
 ├── artifacts/               all fitted outputs land here (gitignored)
 └── src/
     ├── ssa_baseline.py      download/parse SSA table + Gompertz-Makeham fit
@@ -157,15 +159,6 @@ life-expectancy-model/
     ├── bayesian_hazard.py   Bayesian Weibull PH in PyMC
     └── survival.py          person survival curve + credible bands
 ```
-
-
-Nothing else changes — the real cohort has the same schema as the synthetic
-one.
-
-> **Note:** don't run `python run_pipeline.py --rebuild-cohort` after this —
-> that flag regenerates the *synthetic* cohort and will overwrite your real
-> one. Once you've built the real cohort, re-run the individual steps above
-> instead of the full pipeline script.
 
 ---
 
