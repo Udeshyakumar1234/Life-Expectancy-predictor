@@ -10,10 +10,9 @@ the box on synthetic data without anything here.
 For the full download walkthrough (which files, where to get them, naming
 convention), see **"Using real NHANES data"** in the main [README](../../README.md).
 
-Once the files are here, build the real cohort with:
+Once the files are here, just run the pipeline as normal — it detects real
+data automatically:
 
 ```bash
-python -m src.build_cohort
-python -m src.cox_model
-python -m src.bayesian_hazard
+python run_pipeline.py
 ```
