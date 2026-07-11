@@ -3,9 +3,11 @@ One-command pipeline runner.
 
 Runs, in order:
     1. SSA baseline        -> artifacts/gm_params.json
-    2. Cohort              -> data/cohort.csv (synthetic unless you built real NHANES)
-    3. Cox model           -> artifacts/cox_*.{csv,pkl,png}
-    4. Bayesian model      -> artifacts/bayes_posterior.npz, bayes_summary.csv
+    2. Cohort               -> data/cohort.csv
+                               (built from data/raw/ if real NHANES files are
+                               there, otherwise a synthetic cohort is generated)
+    3. Cox model            -> artifacts/cox_*.{csv,pkl,png}
+    4. Bayesian model       -> artifacts/bayes_posterior.npz, bayes_summary.csv
 
 Then launch the app with:  streamlit run app.py
 
@@ -31,12 +33,32 @@ def step(msg):
     print("\n" + "=" * 70 + f"\n>>> {msg}\n" + "=" * 70)
 
 
+def build_cohort_data():
+    """Always rebuilds data/cohort.csv from whatever is currently in data/raw/.
+
+    Prefers real NHANES data if it's there; falls back to a synthetic cohort
+    otherwise. This means data/raw/ is the single source of truth -- add real
+    files there and every subsequent pipeline run automatically picks them up,
+    no flags to remember.
+    """
+    from src import build_cohort
+    try:
+        df = build_cohort.build()
+        df.to_csv(COHORT_CSV, index=False)
+        print(f"[cohort] Built REAL cohort from data/raw/ -> {COHORT_CSV} "
+              f"({len(df)} rows, {int(df['event'].sum())} deaths, "
+              f"{100 * df['event'].mean():.1f}%)")
+    except FileNotFoundError:
+        print("[cohort] No real NHANES files found in data/raw/ -- "
+              "generating a synthetic cohort instead.")
+        from src import synthetic_cohort
+        synthetic_cohort.main()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true", help="Fewer MCMC draws.")
     ap.add_argument("--skip-bayes", action="store_true", help="Skip PyMC step.")
-    ap.add_argument("--rebuild-cohort", action="store_true",
-                    help="Regenerate synthetic cohort even if data/cohort.csv exists.")
     ap.add_argument("--cores", type=int, default=1, help="MCMC cores (default 1).")
     args = ap.parse_args()
 
@@ -52,12 +74,7 @@ def main():
         json.dump({s: asdict(p) for s, p in out["params"].items()}, f, indent=2)
 
     step("Step 2/4  Cohort data")
-    if args.rebuild_cohort or not os.path.exists(COHORT_CSV):
-        from src import synthetic_cohort
-        synthetic_cohort.main()
-    else:
-        print(f"[cohort] Using existing {COHORT_CSV} "
-              "(delete it or pass --rebuild-cohort to regenerate).")
+    build_cohort_data()
 
     step("Step 3/4  Cox proportional-hazards model (validation anchor)")
     from src import cox_model
