@@ -97,11 +97,32 @@ def sample(df: pd.DataFrame, draws=1000, tune=1000, chains=2, cores=1, seed=7,
     import pymc as pm
 
     model = build_model(df)
-    with model:
-        idata = pm.sample(
-            draws=draws, tune=tune, chains=chains, cores=cores, random_seed=seed,
-            target_accept=target_accept, progressbar=False,
-        )
+    try:
+        with model:
+            idata = pm.sample(
+                draws=draws, tune=tune, chains=chains, cores=cores, random_seed=seed,
+                target_accept=target_accept, progressbar=False,
+            )
+    except Exception as e:
+        # Common on Windows: PyTensor finds a C/C++ compiler on PATH (often a
+        # 32-bit MinGW g++) that can't actually compile for a 64-bit Python,
+        # and the C-extension build fails. Retry once in pure Python/NumPy
+        # mode, which sidesteps the compiler entirely (slower, but correct).
+        msg = str(e)
+        if "CompileError" in type(e).__name__ or "g++" in msg or "gcc" in msg.lower():
+            print("[bayes] C compiler unavailable/broken "
+                  f"({type(e).__name__}); retrying in pure-Python mode "
+                  "(slower, but doesn't need a working C/C++ toolchain).")
+            import pytensor
+            pytensor.config.cxx = ""
+            with model:
+                idata = pm.sample(
+                    draws=draws, tune=tune, chains=chains, cores=cores,
+                    random_seed=seed, target_accept=target_accept,
+                    progressbar=False,
+                )
+        else:
+            raise
     return idata
 
 
